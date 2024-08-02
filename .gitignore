@@ -1,0 +1,6 @@
+*.env
+tmp/*
+# coverage file
+cover.out
+# sqlite db
+*.db
