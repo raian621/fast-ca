@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -53,11 +54,18 @@ func NewServer() (*Server, error) {
 	})
 
 	e.GET("/ca/new", func(c echo.Context) error {
-		return c.File("views/ca/new.html")
+    return c.File("views/ca/new.html")
 	})
 
 	e.POST("/ca/new", func(c echo.Context) error {
-		return c.Redirect(http.StatusFound, "/ca")
+    values, err := c.FormParams()
+    if err != nil {
+      return err
+    }
+    if err := newCA(db, values, bytes.NewBuffer([]byte{}), bytes.NewBuffer([]byte{})); err != nil {
+      return err
+    }
+    return c.Redirect(http.StatusFound, "/ca")
 	})
 
 	e.GET("/certificate/new", func(c echo.Context) error {

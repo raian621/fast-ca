@@ -1,6 +1,6 @@
 *.env
 tmp/*
 # coverage file
-cover.out
+coverage.out
 # sqlite db
 *.db

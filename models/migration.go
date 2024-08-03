@@ -6,7 +6,17 @@ import (
 )
 
 // define database migrations here:
-var MIGRATIONS = []MigrationModel{}
+var MIGRATIONS = []MigrationModel{
+  {
+    Name: "Add Encryption Keys Table",
+    SqlStatement: 
+      "CREATE TABLE encryption_keys (" +
+      " id      SERIAL   PRIMARY KEY," +
+      " b64_key CHAR(44) NOT NULL," +
+      " active  BOOLEAN  NOT NULL" +
+      ")",
+  },
+}
 
 // Represents a database schema migration
 type MigrationModel struct {
