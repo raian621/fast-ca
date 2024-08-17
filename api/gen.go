@@ -13,7 +13,9 @@ import (
 
 // CertificatePaginatedData defines model for CertificatePaginatedData.
 type CertificatePaginatedData struct {
-	Name string `json:"name"`
+	CaName   string `json:"caName"`
+	CertType string `json:"certType"`
+	Name     string `json:"name"`
 }
 
 // CertificateListResponse defines model for CertificateListResponse.
@@ -36,6 +38,12 @@ type ServerInterface interface {
 	// Get a list of certificates managed by FastCA
 	// (GET /certificates)
 	GetCertificates(ctx echo.Context, params GetCertificatesParams) error
+	// OpenAPI YAML spec file
+	// (GET /openapi.yml)
+	GetOpenapiYml(ctx echo.Context) error
+	// Redoc OpenAPI spec viewer
+	// (GET /redoc)
+	GetRedoc(ctx echo.Context) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -93,6 +101,24 @@ func (w *ServerInterfaceWrapper) GetCertificates(ctx echo.Context) error {
 	return err
 }
 
+// GetOpenapiYml converts echo context to params.
+func (w *ServerInterfaceWrapper) GetOpenapiYml(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetOpenapiYml(ctx)
+	return err
+}
+
+// GetRedoc converts echo context to params.
+func (w *ServerInterfaceWrapper) GetRedoc(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetRedoc(ctx)
+	return err
+}
+
 // This is a simple interface which specifies echo.Route addition functions which
 // are present on both echo.Echo and echo.Group, since we want to allow using
 // either of them for path registration
@@ -124,5 +150,7 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	router.POST(baseURL+"/certificate", wrapper.PostCertificate)
 	router.GET(baseURL+"/certificate/:certId", wrapper.GetCertificateCertId)
 	router.GET(baseURL+"/certificates", wrapper.GetCertificates)
+	router.GET(baseURL+"/openapi.yml", wrapper.GetOpenapiYml)
+	router.GET(baseURL+"/redoc", wrapper.GetRedoc)
 
 }
