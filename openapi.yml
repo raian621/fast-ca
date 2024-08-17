@@ -1,0 +1,136 @@
+openapi: 3.0.0
+info:
+  title: FastCA
+  description: |-
+    FastCA REST API
+  contact:
+    email: ryan.bell62101@gmail.com
+  license:
+    name: MIT
+    url: https://opensource.org/license/mit
+  version: 0.0.1
+tags:
+  - name: certificate
+    description: Certificate creation, deletion, and management
+paths:
+  /certificates:
+    get:
+      summary: Get a list of certificates managed by FastCA
+      tags:
+        - certificate
+      responses:
+        200:
+          $ref: '#/components/responses/CertificateListResponse'
+        4XX:
+          description: Client error
+          content:
+            application/json:
+              schema:
+                type: string
+      parameters: 
+        - name: limit
+          schema:
+            type: integer
+            minimum: 5
+            maximum: 100
+            default: 20
+          in: query
+          required: false
+        - name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          in: query
+          required: false
+  /certificate:
+    post:
+      summary: Create a new certificate
+      tags:
+        - certificate
+      responses:
+        4XX:
+          description: Client error
+          content:
+            application/json:
+              schema:
+                type: string
+  /certificate/{certId}:
+    get:
+      summary: Download a certificate
+      tags:
+        - certificate
+      responses:
+        200:
+          description: PEM encoded certificate files
+          content:
+            application/gzip:
+              schema:
+        4XX:
+          description: Client error
+          content:
+            application/json:
+              schema:
+                type: string
+      parameters: 
+        - name: certId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+components:
+  responses:
+    CertificateListResponse:
+      description: List data for managed certificates
+      content:
+        application/json: 
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/CertificatePaginatedData'
+  schemas:
+    CertificatePaginatedData:
+      type: object
+      required:
+        - name
+        - caName
+        - certType
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 256
+          examples:
+            - Web Server Certificate
+    CertificateData:
+      type: object
+      required:
+        - name
+        - subject
+        - expires
+        - ca
+      properties:
+        subject:
+          type: object
+          required:
+            - organization
+            - country
+          properties:
+            organization:
+              type: string
+            country:
+              type: string
+            province:
+              type: string
+            locality:
+              type: string
+            postalCode:
+              type: string
+        expires:
+          type: string
+          format: date-time
+        ca:
+          type: integer
+          description: ID of the CA that signs this certificate
+

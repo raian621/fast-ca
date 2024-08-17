@@ -56,4 +56,3 @@ func Decrypt(encryptedBytes, key []byte) ([]byte, error) {
 
   return gcm.Open(nil, nonce, cipherText, nil)
 }
-

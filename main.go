@@ -1,22 +1,9 @@
 package main
 
-import (
-	"log"
+//go:generate go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen --config=oapi-codegen.yml openapi.yml
 
-	"github.com/joho/godotenv"
-	"github.com/raian621/fast-ca/server"
-)
-
-var port = 1234
+import "fmt"
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("error loading .env file:", err)
-	}
-
-	srv, err := server.NewServer()
-	if err != nil {
-		log.Fatalln(err)
-	}
-  srv.Listen("", port)
+  fmt.Println("Hello, world!")
 }
