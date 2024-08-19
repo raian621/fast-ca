@@ -4,7 +4,7 @@ info:
   description: |-
     FastCA REST API
   contact:
-    email: ryan@gmail.com
+    email: ryan.bell62101@gmail.com
   license:
     name: MIT
     url: https://opensource.org/license/mit
@@ -12,18 +12,20 @@ info:
 servers:
   - url: http://localhost:8080/api/v1
 tags:
-  - name: certificate
+  - name: Authentication
+    description: Authenticate using credentials or API keys
+  - name: Certificate
     description: Certificate creation, deletion, and management
-  - name: certificate authority
+  - name: Certificate Authority
     description: Certificate authority creation, deletion, and management
-  - name: documentation
+  - name: Documentation
     description: OpenAPI documentation
 paths:
   /openapi.yml:
     get:
       summary: OpenAPI YAML spec file
       tags:
-        - documentation
+        - Documentation
       responses:
         200:
           description: OpenAPI YAML spec file
@@ -36,11 +38,11 @@ paths:
                   title: FastCA
                   description: |-
                     FastCA REST API
-  /redoc:
+  /docs:
     get:
-      summary: Redoc OpenAPI spec viewer
+      summary: SwaggerUI OpenAPI spec viewer
       tags:
-        - documentation
+        - Documentation
       responses:
         200:
           description: HTML Redoc page
@@ -48,11 +50,55 @@ paths:
             text/html:
               schema:
 
+  /signin:
+    post:
+      summary: Sign in using username and password credentials
+      tags:
+        - Authentication
+      requestBody:
+        content:
+          application/json: 
+            schema:
+              $ref: '#/components/schemas/UserCredentials'
+      responses:
+        200:
+          description: Successful signin
+          headers:
+            Set-Cookie:
+              description: Sets the session cookie for an authenticated user
+              schema:
+        4XX:
+          description: Client error
+          content:
+            application/json:
+              schema:
+                type: string
+  /signout:
+    post:
+      summary: Sign out a currently authenticated user
+      tags:
+        - Authentication
+      responses:
+        200:
+          description: Successful signin
+          headers:
+            Set-Cookie:
+              description: Sets the session cookie for an authenticated user
+              schema:
+        4XX:
+          description: Client error
+          content:
+            application/json:
+              schema:
+                type: string
+      security: 
+        - SessionAuth: []
+
   /ca/{caId}/fullchain:
     get:
       summary: Get the fullchain certificate for the certificate authority
       tags:
-        - certificate authority
+        - Certificate Authority
       parameters:
         - name: caId
           in: path
@@ -71,39 +117,15 @@ paths:
           content:
             application/json:
               schema:
-                type: string          
+                type: string
+      security:
+        - ApiKeyAuth: []
+        - SessionAuth: []
   /ca/list:
     get:
       summary: Get a list of certificate authorities managed by FastCA
       tags:
-        - certificate authority
-      responses:
-        200:
-          $ref: '#/components/responses/CertificateListResponse'
-        4XX:
-          description: Client error
-          content:
-            application/json:
-              schema:
-                type: string
-  /ca:
-    post:
-      summary: Create a certificate authority
-      tags:
-        - certificate authority
-      responses:
-        4XX:
-          description: Client error
-          content:
-            application/json:
-              schema:
-                type: string
-
-  /certificate/list:
-    get:
-      summary: Get a list of certificates managed by FastCA
-      tags:
-        - certificate
+        - Certificate Authority
       responses:
         200:
           $ref: '#/components/responses/CertificateListResponse'
@@ -129,11 +151,14 @@ paths:
             default: 0
           in: query
           required: false
-  /certificate:
+      security:
+        - ApiKeyAuth: []
+        - SessionAuth: []
+  /ca:
     post:
-      summary: Create a new certificate
+      summary: Create a certificate authority
       tags:
-        - certificate
+        - Certificate Authority
       responses:
         4XX:
           description: Client error
@@ -141,11 +166,63 @@ paths:
             application/json:
               schema:
                 type: string
+      security:
+        - ApiKeyAuth: []
+        - SessionAuth: []
+
+  /certificate/list:
+    get:
+      summary: Get a list of certificates managed by FastCA
+      tags:
+        - Certificate
+      responses:
+        200:
+          $ref: '#/components/responses/CertificateListResponse'
+        4XX:
+          description: Client error
+          content:
+            application/json:
+              schema:
+                type: string
+      parameters: 
+        - name: limit
+          schema:
+            type: integer
+            minimum: 5
+            maximum: 100
+            default: 20
+          in: query
+          required: false
+        - name: offset
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          in: query
+          required: false
+      security:
+        - ApiKeyAuth: []
+        - SessionAuth: []
+  /certificate:
+    post:
+      summary: Create a new certificate
+      tags:
+        - Certificate
+      responses:
+        4XX:
+          description: Client error
+          content:
+            application/json:
+              schema:
+                type: string
+      security:
+        - ApiKeyAuth: []
+        - SessionAuth: []
   /certificate/{certId}:
     get:
       summary: Download a certificate
       tags:
-        - certificate
+        - Certificate
       responses:
         200:
           description: PEM encoded certificate files
@@ -165,6 +242,9 @@ paths:
           schema:
             type: integer
             minimum: 0
+      security:
+        - ApiKeyAuth: []
+        - SessionAuth: []
 components:
   responses:
     CertificateListResponse:
@@ -175,6 +255,14 @@ components:
             type: array
             items:
               $ref: '#/components/schemas/CertificatePaginatedData'
+    CaListResponse:
+      description: List of certificate authority datas
+      content:
+        application/json: 
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/CaPaginatedData'
   schemas:
     CertificatePaginatedData:
       type: object
@@ -182,6 +270,7 @@ components:
         - name
         - caName
         - certType
+        - id
       properties:
         name:
           type: string
@@ -198,6 +287,8 @@ components:
           minLength: 3
           maxLength: 256
           example: Web Server Certificate
+        id:
+          type: integer
     CertificateData:
       type: object
       required:
@@ -205,7 +296,6 @@ components:
         - subject
         - expires
         - ca
-        - id
       properties:
         subject:
           type: object
@@ -236,13 +326,24 @@ components:
       required:
         - name
         - id
+        - certType
+      properties:
+        name:
+          minLength: 3
+          maxLength: 256
+          example: Web Server Certificate
+        certType:
+          type: string
+          minLength: 3
+          maxLength: 256
+        id:
+          type: integer
     CaData:
       type: object
       required:
         - name
         - subject
         - expires
-        - ca
       properties:
         subject:
           type: object
@@ -263,7 +364,33 @@ components:
         expires:
           type: string
           format: date-time
-        ca:
-          type: integer
-          description: ID of the CA that signs this certificate
-
+    UserCredentials:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 5
+          maxLength: 256
+        password:
+          type: string
+          format: password
+          minLength: 10
+    UserSignupCredentials:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    SessionAuth:
+      type: apiKey
+      in: cookie
+      name: FASTCA_SESSION

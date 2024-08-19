@@ -4,34 +4,50 @@ package main
 
 import (
 	"log"
-	"os"
-	"path"
 
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/raian621/fast-ca/api"
+	"github.com/raian621/fast-ca/database"
+	"github.com/raian621/fast-ca/util"
 )
 
-var clientDirectory = "client/dist"
+var (
+	clientDir = "client/dist"
+)
 
 func main() {
-  server := &Server{}
-  e := echo.New()
+	if err := godotenv.Load(); err != nil {
+		log.Fatal(err)
+	}
 
-  execPath, err := os.Executable()
-  if err != nil {
-    log.Fatal(err)
-  }
+	if err := database.NewDB(); err != nil {
+		log.Fatal(err)
+	}
 
-  baseDir := path.Dir(execPath)
-  absClientDirectory := path.Join(baseDir, clientDirectory)
-  if value, present := os.LookupEnv("CLIENT_DIRECTORY"); present {
-    absClientDirectory = value
-  }
+	server := &Server{}
+	e := echo.New()
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{
+			"http://localhost:8080",
+			// Swagger OpenAPI editor
+			"https://editor-next.swagger.io/",
+			"https://editor.swagger.io/",
+		},
+		AllowMethods: []string{"GET", "PUT", "POST", "DELETE", "OPTION"},
+	}))
 
-  log.Println(absClientDirectory)
-  e.Static("/", absClientDirectory)
+	absClientDirectory, err := util.RelativeToAbsolutePath(clientDir)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-  group := e.Group("/api/v1")
-  api.RegisterHandlers(group, server)
-  log.Fatal(e.Start("0.0.0.0:8080"))
+	e.Static("/", absClientDirectory)
+
+	group := e.Group("/api/v1")
+	api.RegisterHandlers(group, server)
+	log.Fatal(e.Start("0.0.0.0:8080"))
 }

@@ -69,17 +69,22 @@ func CreateCA(config *CertificateConfig) ([]byte, []byte, error) {
 	}
 
 	caPEM := new(bytes.Buffer)
-	pem.Encode(caPEM, &pem.Block{
+  err = pem.Encode(caPEM, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: caBytes,
 	})
-
+  if err != nil {
+    return []byte{}, []byte{}, err
+  }
 	caPrivateKeyBytes := x509.MarshalPKCS1PrivateKey(caPrivateKey)
 	caPrivateKeyPEM := new(bytes.Buffer)
-	pem.Encode(caPrivateKeyPEM, &pem.Block{
+	err = pem.Encode(caPrivateKeyPEM, &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: caPrivateKeyBytes,
 	})
+  if err != nil {
+    return []byte{}, []byte{}, err
+  }
 
 	return caPEM.Bytes(), caPrivateKeyPEM.Bytes(), nil
 }

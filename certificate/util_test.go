@@ -58,45 +58,44 @@ LhpdEpDVH3mc22SNZ3yKLNaM40SSyFAAJI27oO5kUaJjsOcz5lShlsehCgo=
 -----END RSA PRIVATE KEY-----
 `)
 
-
 func TestCertificateEncryption(t *testing.T) {
-  key := []byte("01234567890123456789012345678901")
-  cipherText, err := Encrypt(exampleKey, key)
-  if err != nil {
-    t.Fatal(err)
-  }
- 
-  decryptedKey, err := Decrypt(cipherText, key)
-  if err != nil {
-    t.Fatal(err)
-  }
-  if !reflect.DeepEqual(exampleKey, decryptedKey) {
-    t.Fatalf(
-      "Expected `%s`, got `%s`",
-      string(exampleKey),
-      string(decryptedKey),
-    )
-  }
+	key := []byte("01234567890123456789012345678901")
+	cipherText, err := Encrypt(exampleKey, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	decryptedKey, err := Decrypt(cipherText, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(exampleKey, decryptedKey) {
+		t.Fatalf(
+			"Expected `%s`, got `%s`",
+			string(exampleKey),
+			string(decryptedKey),
+		)
+	}
 }
 
 func TestCertificateEncryptionIncorrectKeyLength(t *testing.T) {
-  key := []byte("1234")
-  _, err := Encrypt(exampleKey, key)
-  if err != ErrIncorrectKeyLength {
-    t.Error("expected `ErrIncorrectKeyLength`")
-  }
-  _, err = Decrypt(exampleKey, key)
-  if err != ErrIncorrectKeyLength {
-    t.Error("expected `ErrIncorrectKeyLength`")
-  }
-  
-  key = []byte("123456789012345678901234567890123")
-  _, err = Encrypt(exampleKey, key)
-  if err != ErrIncorrectKeyLength {
-    t.Error("expected `ErrIncorrectKeyLength`")
-  }
-  _, err = Decrypt(exampleKey, key)
-  if err != ErrIncorrectKeyLength {
-    t.Error("expected `ErrIncorrectKeyLength`")
-  }
+	key := []byte("1234")
+	_, err := Encrypt(exampleKey, key)
+	if err != ErrIncorrectKeyLength {
+		t.Error("expected `ErrIncorrectKeyLength`")
+	}
+	_, err = Decrypt(exampleKey, key)
+	if err != ErrIncorrectKeyLength {
+		t.Error("expected `ErrIncorrectKeyLength`")
+	}
+
+	key = []byte("123456789012345678901234567890123")
+	_, err = Encrypt(exampleKey, key)
+	if err != ErrIncorrectKeyLength {
+		t.Error("expected `ErrIncorrectKeyLength`")
+	}
+	_, err = Decrypt(exampleKey, key)
+	if err != ErrIncorrectKeyLength {
+		t.Error("expected `ErrIncorrectKeyLength`")
+	}
 }

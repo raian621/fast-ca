@@ -11,39 +11,75 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+const (
+	ApiKeyAuthScopes  = "ApiKeyAuth.Scopes"
+	SessionAuthScopes = "SessionAuth.Scopes"
+)
+
 // CertificatePaginatedData defines model for CertificatePaginatedData.
 type CertificatePaginatedData struct {
 	CaName   string `json:"caName"`
 	CertType string `json:"certType"`
+	Id       int    `json:"id"`
 	Name     string `json:"name"`
+}
+
+// UserCredentials defines model for UserCredentials.
+type UserCredentials struct {
+	Password string `json:"password"`
+	Username string `json:"username"`
 }
 
 // CertificateListResponse defines model for CertificateListResponse.
 type CertificateListResponse = []CertificatePaginatedData
 
-// GetCertificatesParams defines parameters for GetCertificates.
-type GetCertificatesParams struct {
+// GetCaListParams defines parameters for GetCaList.
+type GetCaListParams struct {
 	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
 	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
 }
 
+// GetCertificateListParams defines parameters for GetCertificateList.
+type GetCertificateListParams struct {
+	Limit  *int `form:"limit,omitempty" json:"limit,omitempty"`
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+}
+
+// PostSigninJSONRequestBody defines body for PostSignin for application/json ContentType.
+type PostSigninJSONRequestBody = UserCredentials
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Create a certificate authority
+	// (POST /ca)
+	PostCa(ctx echo.Context) error
+	// Get a list of certificate authorities managed by FastCA
+	// (GET /ca/list)
+	GetCaList(ctx echo.Context, params GetCaListParams) error
+	// Get the fullchain certificate for the certificate authority
+	// (GET /ca/{caId}/fullchain)
+	GetCaCaIdFullchain(ctx echo.Context, caId int) error
 	// Create a new certificate
 	// (POST /certificate)
 	PostCertificate(ctx echo.Context) error
+	// Get a list of certificates managed by FastCA
+	// (GET /certificate/list)
+	GetCertificateList(ctx echo.Context, params GetCertificateListParams) error
 	// Download a certificate
 	// (GET /certificate/{certId})
 	GetCertificateCertId(ctx echo.Context, certId int) error
-	// Get a list of certificates managed by FastCA
-	// (GET /certificates)
-	GetCertificates(ctx echo.Context, params GetCertificatesParams) error
+	// SwaggerUI OpenAPI spec viewer
+	// (GET /docs)
+	GetDocs(ctx echo.Context) error
 	// OpenAPI YAML spec file
 	// (GET /openapi.yml)
 	GetOpenapiYml(ctx echo.Context) error
-	// Redoc OpenAPI spec viewer
-	// (GET /redoc)
-	GetRedoc(ctx echo.Context) error
+	// Sign in using username and password credentials
+	// (POST /signin)
+	PostSignin(ctx echo.Context) error
+	// Sign out a currently authenticated user
+	// (POST /signout)
+	PostSignout(ctx echo.Context) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -51,37 +87,29 @@ type ServerInterfaceWrapper struct {
 	Handler ServerInterface
 }
 
-// PostCertificate converts echo context to params.
-func (w *ServerInterfaceWrapper) PostCertificate(ctx echo.Context) error {
+// PostCa converts echo context to params.
+func (w *ServerInterfaceWrapper) PostCa(ctx echo.Context) error {
 	var err error
 
+	ctx.Set(ApiKeyAuthScopes, []string{})
+
+	ctx.Set(SessionAuthScopes, []string{})
+
 	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.PostCertificate(ctx)
+	err = w.Handler.PostCa(ctx)
 	return err
 }
 
-// GetCertificateCertId converts echo context to params.
-func (w *ServerInterfaceWrapper) GetCertificateCertId(ctx echo.Context) error {
+// GetCaList converts echo context to params.
+func (w *ServerInterfaceWrapper) GetCaList(ctx echo.Context) error {
 	var err error
-	// ------------- Path parameter "certId" -------------
-	var certId int
 
-	err = runtime.BindStyledParameterWithOptions("simple", "certId", ctx.Param("certId"), &certId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
-	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter certId: %s", err))
-	}
+	ctx.Set(ApiKeyAuthScopes, []string{})
 
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.GetCertificateCertId(ctx, certId)
-	return err
-}
-
-// GetCertificates converts echo context to params.
-func (w *ServerInterfaceWrapper) GetCertificates(ctx echo.Context) error {
-	var err error
+	ctx.Set(SessionAuthScopes, []string{})
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params GetCertificatesParams
+	var params GetCaListParams
 	// ------------- Optional query parameter "limit" -------------
 
 	err = runtime.BindQueryParameter("form", true, false, "limit", ctx.QueryParams(), &params.Limit)
@@ -97,7 +125,98 @@ func (w *ServerInterfaceWrapper) GetCertificates(ctx echo.Context) error {
 	}
 
 	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.GetCertificates(ctx, params)
+	err = w.Handler.GetCaList(ctx, params)
+	return err
+}
+
+// GetCaCaIdFullchain converts echo context to params.
+func (w *ServerInterfaceWrapper) GetCaCaIdFullchain(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "caId" -------------
+	var caId int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "caId", ctx.Param("caId"), &caId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter caId: %s", err))
+	}
+
+	ctx.Set(ApiKeyAuthScopes, []string{})
+
+	ctx.Set(SessionAuthScopes, []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetCaCaIdFullchain(ctx, caId)
+	return err
+}
+
+// PostCertificate converts echo context to params.
+func (w *ServerInterfaceWrapper) PostCertificate(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(ApiKeyAuthScopes, []string{})
+
+	ctx.Set(SessionAuthScopes, []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.PostCertificate(ctx)
+	return err
+}
+
+// GetCertificateList converts echo context to params.
+func (w *ServerInterfaceWrapper) GetCertificateList(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(ApiKeyAuthScopes, []string{})
+
+	ctx.Set(SessionAuthScopes, []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCertificateListParams
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "limit", ctx.QueryParams(), &params.Limit)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter limit: %s", err))
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "offset", ctx.QueryParams(), &params.Offset)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter offset: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetCertificateList(ctx, params)
+	return err
+}
+
+// GetCertificateCertId converts echo context to params.
+func (w *ServerInterfaceWrapper) GetCertificateCertId(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "certId" -------------
+	var certId int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "certId", ctx.Param("certId"), &certId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter certId: %s", err))
+	}
+
+	ctx.Set(ApiKeyAuthScopes, []string{})
+
+	ctx.Set(SessionAuthScopes, []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetCertificateCertId(ctx, certId)
+	return err
+}
+
+// GetDocs converts echo context to params.
+func (w *ServerInterfaceWrapper) GetDocs(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetDocs(ctx)
 	return err
 }
 
@@ -110,12 +229,23 @@ func (w *ServerInterfaceWrapper) GetOpenapiYml(ctx echo.Context) error {
 	return err
 }
 
-// GetRedoc converts echo context to params.
-func (w *ServerInterfaceWrapper) GetRedoc(ctx echo.Context) error {
+// PostSignin converts echo context to params.
+func (w *ServerInterfaceWrapper) PostSignin(ctx echo.Context) error {
 	var err error
 
 	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.GetRedoc(ctx)
+	err = w.Handler.PostSignin(ctx)
+	return err
+}
+
+// PostSignout converts echo context to params.
+func (w *ServerInterfaceWrapper) PostSignout(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(SessionAuthScopes, []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.PostSignout(ctx)
 	return err
 }
 
@@ -147,10 +277,15 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 		Handler: si,
 	}
 
+	router.POST(baseURL+"/ca", wrapper.PostCa)
+	router.GET(baseURL+"/ca/list", wrapper.GetCaList)
+	router.GET(baseURL+"/ca/:caId/fullchain", wrapper.GetCaCaIdFullchain)
 	router.POST(baseURL+"/certificate", wrapper.PostCertificate)
+	router.GET(baseURL+"/certificate/list", wrapper.GetCertificateList)
 	router.GET(baseURL+"/certificate/:certId", wrapper.GetCertificateCertId)
-	router.GET(baseURL+"/certificates", wrapper.GetCertificates)
+	router.GET(baseURL+"/docs", wrapper.GetDocs)
 	router.GET(baseURL+"/openapi.yml", wrapper.GetOpenapiYml)
-	router.GET(baseURL+"/redoc", wrapper.GetRedoc)
+	router.POST(baseURL+"/signin", wrapper.PostSignin)
+	router.POST(baseURL+"/signout", wrapper.PostSignout)
 
 }
