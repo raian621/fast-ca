@@ -27,6 +27,11 @@ func CreateUser(username, email, passhash string) (int, error) {
 	return userId, err
 }
 
+func DeleteUser(userId int) error {
+  _, err := db.Exec("delete from users where id=?", userId)
+  return err
+}
+
 func BootstrapAdminUser() error {
 	username := "admin"
 	password := "password"
@@ -41,11 +46,26 @@ func BootstrapAdminUser() error {
 	if envEmail, present := os.LookupEnv("ADMIN_EMAIL"); present {
 		email = envEmail
 	}
-
-	passhash, err := util.HashPassword(password)
+  
+  salt, err := util.GenerateSalt()
 	if err != nil {
 		return nil
 	}
+	passhash := util.HashPassword(password, salt)
 	_, err = CreateUser(username, email, passhash)
 	return err
+}
+
+func ValidateCredentials(usernameOrEmail, password string) (bool, error) {
+  row := db.QueryRow(
+    "select passhash from users where username=? or email=?",
+    usernameOrEmail,
+    usernameOrEmail,
+  )
+  var passhash string
+  if err := row.Scan(&passhash); err != nil {
+    return false, err
+  }
+
+  return util.ValidatePassword(password, passhash)
 }

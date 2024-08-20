@@ -8,12 +8,46 @@ import (
 	"os"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/raian621/fast-ca/api"
+	"github.com/raian621/fast-ca/auth"
 )
 
-type Server struct{}
+type Server struct{
+  e *echo.Echo
+}
 
 var _ api.ServerInterface = (*Server)(nil)
+
+// Create a new server object. It will serve requests to the REST API on the
+// `/api/v1` path and will serve client web pages and assets from the root path
+// `/`
+func NewServer(clientDir string) *Server {
+	server := &Server{}
+	e := echo.New()
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{
+			"http://localhost:8080",
+			// Swagger OpenAPI viewer
+			"https://editor-next.swagger.io/",
+			"https://editor.swagger.io/",
+		},
+		AllowMethods: []string{"GET", "PUT", "POST", "DELETE", "OPTION"},
+	}))
+
+	e.Static("/", clientDir)
+	group := e.Group("/api/v1")
+	api.RegisterHandlers(group, server)
+  server.e = e
+
+  return server
+}
+
+func (s *Server) Start(addr string) error {
+  return s.e.Start(addr)
+}
 
 func (s *Server) GetCertificateCertId(ctx echo.Context, certId int) error {
 	return nil
@@ -78,10 +112,19 @@ func (s *Server) PostCa(ctx echo.Context) error {
 }
 
 func (s *Server) PostSignin(ctx echo.Context) error {
-	var data api.UserCredentials
-	if err := json.NewDecoder(ctx.Request().Body).Decode(&data); err != nil {
-		return err
+	var userCreds api.UserCredentials
+	if err := json.NewDecoder(ctx.Request().Body).Decode(&userCreds); err != nil {
+    return err
 	}
+
+  log.Println(userCreds)
+  valid, err := auth.AuthenticateUser(userCreds.Username, userCreds.Password)
+  if err != nil {
+    return err
+  }
+  if !valid {
+    return ctx.JSON(http.StatusBadRequest, "username or password is incorrect")
+  }
 
 	return ctx.NoContent(200)
 }

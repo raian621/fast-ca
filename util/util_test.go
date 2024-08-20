@@ -3,6 +3,7 @@ package util
 import (
 	"os"
 	"path"
+	"regexp"
 	"testing"
 )
 
@@ -65,4 +66,65 @@ func TestRelativeToAbsolutePath(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGenerateSalt(t *testing.T) {
+  t.Parallel()
+  salt, err := GenerateSalt()
+  if err != nil {
+    t.Fatal(err)
+  }
+  if len(salt) != 16 {
+    t.Error("expected salt to have 16 bytes")
+  }
+}
+
+func TestHashPassword(t *testing.T) {
+  t.Parallel()
+  salt, err := GenerateSalt()
+  if err != nil {
+    t.Fatal(err)
+  }
+
+  password := "password1234"
+  passhash := HashPassword(password, salt)
+  if len(passhash) != 97 {
+    t.Error("expected passhash to be 97 characters long")
+  }
+
+  pattern := `\$argon2id\$v=19\$m=65536,t=3,p=2\$.+\$.+`
+  matched, err := regexp.MatchString(
+    pattern,
+    passhash,
+  )
+  if err != nil {
+    t.Error(err)
+  }
+  if !matched {
+    t.Errorf("expected `%s` to match pattern `%s`", passhash, pattern)
+  }
+}
+
+func TestValidatePassword(t *testing.T) {
+  t.Parallel()
+  password := "password1234"
+  notThePassword := "notthepasswordlol"
+
+  salt, err := GenerateSalt()
+  if err != nil {
+    t.Fatal(err)
+  }
+  passhash := HashPassword(password, salt)
+
+  if valid, err := ValidatePassword(password, passhash); err != nil {
+    t.Error(err)
+  } else if !valid {
+    t.Errorf("expected `password` to be validated")
+  }
+
+  if valid, err := ValidatePassword(notThePassword, passhash); err != nil {
+    t.Error(err)
+  } else if valid {
+    t.Errorf("expected `notThePassword` to not be validated")
+  }
 }

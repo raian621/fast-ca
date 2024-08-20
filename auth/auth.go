@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/sessions"
+	"github.com/raian621/fast-ca/database"
 )
 
 var (
@@ -19,8 +20,8 @@ func init() {
 	store = sessions.NewCookieStore([]byte(key))
 }
 
-func AuthenticateUser(username, password string) (bool, error) {
-	return false, nil
+func AuthenticateUser(usernameOrEmail, password string) (bool, error) {
+	return database.ValidateCredentials(usernameOrEmail, password)
 }
 
 func AuthenticateApiKey(apiKey string) (bool, error) {

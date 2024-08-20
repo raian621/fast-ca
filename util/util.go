@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"golang.org/x/crypto/argon2"
 )
+
+var saltLength uint32 = 16
 
 func RelativeToAbsolutePath(relativePath string) (string, error) {
 	var baseDir string
@@ -25,20 +28,13 @@ func RelativeToAbsolutePath(relativePath string) (string, error) {
 	return path.Join(baseDir, relativePath), nil
 }
 
-func HashPassword(password string) (string, error) {
+func HashPassword(password string, salt []byte) string {
 	var (
 		memory      uint32 = 64 * 1024
 		iterations  uint32 = 3
 		parallelism uint8  = 2
-		saltLength  uint32 = 16
 		keyLength   uint32 = 32
 	)
-
-	salt := make([]byte, saltLength)
-	_, err := rand.Read(salt)
-	if err != nil {
-		return "", err
-	}
 
 	hash := argon2.IDKey(
 		[]byte(password),
@@ -62,7 +58,33 @@ func HashPassword(password string) (string, error) {
 		saltBase64,
 	)
 
-  fmt.Println(len(fullHash))
+	return fullHash
+}
 
-	return fullHash, nil
+// Generates a random 16 byte salt
+func GenerateSalt() ([]byte, error) {
+  salt := make([]byte, saltLength)
+  if _, err := rand.Read(salt); err != nil {
+    return salt, err
+  }
+
+  return salt, nil
+}
+
+// Extracts the salt from Argon2id hash
+func ExtractSalt(passhash string) ([]byte, error) {
+  splits := strings.Split(passhash, "$")
+  saltBase64 := splits[len(splits)-1]
+  salt := make([]byte, saltLength)
+  _, err := base64.RawStdEncoding.Decode(salt, []byte(saltBase64)) 
+  return salt, err
+}
+
+func ValidatePassword(password, passhash string) (bool, error) {
+  salt, err := ExtractSalt(passhash)
+  if err != nil {
+    return false, err
+  }
+  passwordHash := HashPassword(password, salt)
+  return passwordHash == passhash, nil
 }
